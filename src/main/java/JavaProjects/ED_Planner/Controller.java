@@ -3,17 +3,11 @@ package JavaProjects.ED_Planner;
 import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.io.File;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Queue;
 
 import javax.swing.BorderFactory;
-import javax.swing.DefaultListModel;
-import javax.swing.JFileChooser;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
@@ -21,15 +15,14 @@ import javax.swing.JTable;
 import javax.swing.JTextField;
 import javax.swing.table.DefaultTableModel;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-
 public class Controller implements ActionListener
 {
 	private GUI gui;
     private Model model;
     private User currentUser;
+    private StudentView studentView;
+    private DefaultTableModel tableModel;
+    private LoginView loginView;
     
         
     public Controller(GUI gui) {
@@ -136,22 +129,23 @@ public class Controller implements ActionListener
     }
    
     private void handleLogin() {
-        LoginView loginView = gui.getLoginView();
+        loginView = gui.getLoginView();
         String email = loginView.getEmail();
         String password = loginView.getPassword();
-        
         if (email.isEmpty() || password.isEmpty()) {
             JOptionPane.showMessageDialog(gui, "All fields are required.", "Error", JOptionPane.ERROR_MESSAGE);
             return;
-        }
-        
+        }        
         if (model.authenticateUser(email, password)) {
             JOptionPane.showMessageDialog(gui, "Login successful!", "Success", JOptionPane.INFORMATION_MESSAGE);
-            currentUser = model.getCurrentUser(email); // Ensure currentUser is set
-            loadAcademicHistory();
+            currentUser = model.getCurrentUser(email);
+            
+            // Load academic history
+            List<Map<String, String>> academicHistory = model.loadAcademicHistory();
+    
+            // Switch to StudentView and populate data
             gui.switchToStudentView(currentUser);
-            
-            
+            populateAcademicTable(academicHistory);               
         } else {
             JOptionPane.showMessageDialog(gui, "Invalid email or password.", "Error", JOptionPane.ERROR_MESSAGE);
         }
@@ -227,15 +221,6 @@ public class Controller implements ActionListener
     }
    
     
-    private void handleSave() {
-        
-    }
-    private void saveAcademicHistory() {
-        
-    }
-    
-    private void loadAcademicHistory() {
-           }
     private void handleHelp() {
         JOptionPane.showMessageDialog(gui, "For help, contact support@academicpathwayplanner.com", 
                                       "Help", JOptionPane.INFORMATION_MESSAGE);
@@ -278,22 +263,87 @@ public class Controller implements ActionListener
     	    }
     	}
 
+    private void handleSave(){
+         studentView = gui.getStudentView();
+        if (studentView == null) {
+            System.err.println("StudentView is not initialized!");
+            return;
+        }
     
-   	private void handleEvaluate() {
-   	    
-   	}
+        // Retrieve academic history from the table
+         tableModel = studentView.getAcademicTableModel();
+        int rowCount = tableModel.getRowCount();
+        int colCount = tableModel.getColumnCount();
+        String[][] academicData = new String[rowCount][colCount];
+    
+        for (int i = 0; i < rowCount; i++) {
+            for (int j = 0; j < colCount; j++) {
+                academicData[i][j] = tableModel.getValueAt(i, j).toString();
+            }
+        }
+    
+        // Save the academic data
+        if (model.saveAcademicHistory(academicData)) {
+            JOptionPane.showMessageDialog(gui, "Academic history saved successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
+        } else {
+            JOptionPane.showMessageDialog(gui, "Failed to save academic history.", "Error", JOptionPane.ERROR_MESSAGE);
+        }  
+    }
+    private void handleEvaluate() {
+            try {
+                Queue<String> recommendations = model.getCareerRecommendationsFromAPI();
+                StringBuilder recList = new StringBuilder("Career Recommendations:\n");
+                for (String rec : recommendations) {
+                    recList.append(rec).append("\n");
+                }
+                JOptionPane.showMessageDialog(gui, recList.toString(), "Recommendations", JOptionPane.INFORMATION_MESSAGE);
+            } catch (Exception e) {
+                JOptionPane.showMessageDialog(gui, "Error fetching recommendations: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        }
+        private void populateAcademicTable(List<Map<String, String>> academicHistory) {
+             studentView = gui.getStudentView();
+            DefaultTableModel tableModel = studentView.getAcademicTableModel();
+        
+            // Clear existing data
+            tableModel.setRowCount(0);
+        
+            // Populate table with academic history
+            for (Map<String, String> record : academicHistory) {
+                String[] rowData = {
+                    record.getOrDefault("Year", ""),
+                    record.getOrDefault("CourseName", ""),
+                    record.getOrDefault("Grade", ""),
+                    record.getOrDefault("SAT", ""),
+                    record.getOrDefault("ACT", ""),
+                    record.getOrDefault("FAST_READING", ""),
+                    record.getOrDefault("FAST_MATH", "")
+                };
+                tableModel.addRow(rowData);
+            }
+        }
 
   
-	private void handleGeneratePathway() {
-    	         
-    }
+        private void handleGeneratePathway() {
+            String career = "Software Developer";
+            List<String> pathway = model.bfsPathway(career);
+            String[][] pathwayData = new String[pathway.size()][4];
+            for (int i = 0; i < pathway.size(); i++) {
+                pathwayData[i][0] = String.valueOf(2023 + i);
+                pathwayData[i][1] = pathway.get(i);
+                pathwayData[i][2] = i > 0 ? pathway.get(i - 1) : "None";
+                pathwayData[i][3] = "Complete coursework and gain internship experience";
+            }
+            gui.switchToPathwayView(career, pathwayData);
+        }
     
     private void handleBack() {
-    	
+    	gui.switchToStudentView(currentUser);
     }
     
     private void handleConfirm() {
-    	
+    	JOptionPane.showMessageDialog(gui, "Pathway confirmed!", "Success", JOptionPane.INFORMATION_MESSAGE);
+        handleBack();
     }
 
     private void handleExportReport() {
@@ -304,11 +354,6 @@ public class Controller implements ActionListener
         // Collect data from the Model and generate the report content
         return "Your Career Pathway Report";
     }    
-
-    private String generatePathway() {
-        // Simulate generating a pathway (replace with actual implementation)
-        return "Math -> Advanced Math -> Computer Science -> Engineering Major";
-    }
 
     private boolean exportReport() {
         // Simulate exporting a report (replace with actual implementation)

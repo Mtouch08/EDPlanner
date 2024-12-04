@@ -72,6 +72,13 @@ public class User {
     public void setOnetResults(Map<String, String> onetResults) {
         this.onetResults = onetResults;
     }
+    public List<Map<String, String>> getAcademicHistory() {
+        return academicHistory;
+    }
+
+    public void setAcademicHistory(List<Map<String, String>> academicHistory) {
+        this.academicHistory = academicHistory;
+    }
     
     @Override
     public String toString() {
@@ -84,5 +91,6 @@ public class User {
                 ", onetResults=" + onetResults +
                 '}';
     }
+
 
 }

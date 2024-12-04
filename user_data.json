@@ -1,1 +1,41 @@
-{"mtouch@sdsu.edu":{"email":"mtouch@sdsu.edu","username":"Millie Tan","hashedPassword":"444b93d56b48a92fd56e201f38b8ef218603402fa44553596ee5fe6e9f8a3f44","academicHistory":[],"onetResults":{"19-4099":"Life, Physical, and Social Science Technicians, All Other","15-1121":"Software Developers, Applications","17-2141":"Mechanical Engineers"}},"msoeun@yahoo.com":{"email":"msoeun@yahoo.com","username":"Melanie Soeun","hashedPassword":"374e908362ff77020c989af339d44c139ecf10922f18918548ee127fb37fe9cc","academicHistory":[],"onetScores":{},"onetResults":{}},"rosak11@gmail.com":{"email":"rosak11@gmail.com","username":"Colin Chang","hashedPassword":"374e908362ff77020c989af339d44c139ecf10922f18918548ee127fb37fe9cc","gradeLevel":"9th","school":"La Jolla High","academicHistory":[],"onetScores":{},"onetResults":{}},"benso@gmail.com":{"email":"benso@gmail.com","username":"Ben So","hashedPassword":"374e908362ff77020c989af339d44c139ecf10922f18918548ee127fb37fe9cc","gradeLevel":"9th","school":"Holmes High","academicHistory":[],"onetScores":{},"onetResults":{}}}
+{
+  "mtouch@sdsu.edu": {
+    "email": "mtouch@sdsu.edu",
+    "username": "Millie Tan",
+    "hashedPassword": "444b93d56b48a92fd56e201f38b8ef218603402fa44553596ee5fe6e9f8a3f44",
+    "academicHistory": [],
+    "onetResults": {
+      "19-4099": "Life, Physical, and Social Science Technicians, All Other",
+      "15-1121": "Software Developers, Applications",
+      "17-2141": "Mechanical Engineers"
+    }
+  },
+  "msoeun@yahoo.com": {
+    "email": "msoeun@yahoo.com",
+    "username": "Melanie Soeun",
+    "hashedPassword": "374e908362ff77020c989af339d44c139ecf10922f18918548ee127fb37fe9cc",
+    "academicHistory": [],
+    "onetScores": {},
+    "onetResults": {}
+  },
+  "rosak11@gmail.com": {
+    "email": "rosak11@gmail.com",
+    "username": "Colin Chang",
+    "hashedPassword": "374e908362ff77020c989af339d44c139ecf10922f18918548ee127fb37fe9cc",
+    "gradeLevel": "9th",
+    "school": "La Jolla High",
+    "academicHistory": [],
+    "onetScores": {},
+    "onetResults": {}
+  },
+  "benso@gmail.com": {
+    "email": "benso@gmail.com",
+    "username": "Ben So",
+    "hashedPassword": "374e908362ff77020c989af339d44c139ecf10922f18918548ee127fb37fe9cc",
+    "gradeLevel": "9th",
+    "school": "Holmes High",
+    "academicHistory": [],
+    "onetScores": {},
+    "onetResults": {}
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "mtouch@sdsu.edu": {
+    "email": "mtouch@sdsu.edu",
+    "username": "Millie Tan",
+    "hashedPassword": "81188e754cf088e0fd0aefdb40b25769b4dfb3211acdfedddcc166c40f9e4501",
+    "gradeLevel": "12th",
+    "school": "San Diego State",
+    "academicHistory": [
+      {
+        "CourseName": "Math",
+        "FAST_READING": "1600",
+        "ACT": "36",
+        "Year": "2024",
+        "FAST_MATH": "1600",
+        "SAT": "1600",
+        "Grade": "A"
+      }
+    ],
+    "onetScores": {},
+    "onetResults": {}
+  }
+}
