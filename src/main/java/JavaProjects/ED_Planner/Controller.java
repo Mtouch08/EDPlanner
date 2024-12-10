@@ -3,8 +3,11 @@ package JavaProjects.ED_Planner;
 import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Stack;
 import java.util.stream.Collectors;
 
 import javax.swing.BorderFactory;
@@ -22,6 +25,8 @@ public class Controller implements ActionListener
     private User currentUser;
     private StudentView studentView;
     private LoginView loginView;
+    private Stack<String[][]> undoStack = new Stack<>();
+private Stack<String[][]> redoStack = new Stack<>();
     
         
     public Controller(GUI gui) {
@@ -55,12 +60,20 @@ public class Controller implements ActionListener
             case "Upload Grades/Test":
             	handleUploadGrades();
             	break;
+                case "Undo":
+                undo();
+                break;
+            case "Redo":
+                redo();
+                break;
             case "Save":
-            	handleSave();
-            	break;
+                saveStateForUndo(); // Save state before performing the action
+                handleSave();
+                break;
             case "Delete":
-            	handleDelete();
-            	break;
+                saveStateForUndo(); // Save state before performing the action
+                handleDelete();
+                break;
             case "Evaluate":
             	handleEvaluate();
             	break;
@@ -284,28 +297,27 @@ public class Controller implements ActionListener
     	    }
     	}
 
-    private void handleSave() {
+        private void handleSave() {
             try {
-                // Ensure studentView is not null
-                if (studentView == null) {
-                    studentView = gui.getStudentView();
-                }
-        
-                // Get the academic table model
                 DefaultTableModel academicTableModel = studentView.getAcademicTableModel();
                 int rowCount = academicTableModel.getRowCount();
                 int colCount = academicTableModel.getColumnCount();
                 String[][] academicData = new String[rowCount][colCount];
         
-                // Extract data from the table model
                 for (int i = 0; i < rowCount; i++) {
                     for (int j = 0; j < colCount; j++) {
                         Object cellValue = academicTableModel.getValueAt(i, j);
-                        academicData[i][j] = (cellValue != null) ? cellValue.toString() : "N/A"; // Handle null values
+                        academicData[i][j] = (cellValue != null) ? cellValue.toString() : "N/A";
                     }
+        
+                    // Add to academicTree (Model)
+                    model.addAcademicRecord(
+                        Integer.parseInt(academicData[i][0]),  // Year
+                        academicData[i][2],                   // Course Name
+                        academicData[i][3]                    // Grade
+                    );
                 }
         
-                // Save the academic history
                 if (model.saveAcademicHistory(academicData)) {
                     JOptionPane.showMessageDialog(gui, "Academic history saved successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
                 } else {
@@ -410,17 +422,33 @@ public class Controller implements ActionListener
   
         private void handleGeneratePathway() {
             try {
+                // Debug academicTree
+                System.out.println("Debugging academicTree...");
+                model.debugAcademicTree();
+        
+                // Fetch academic history
+                List<Map<String, String>> academicHistory = model.convertTreeMapToAcademicHistory();
+                if (academicHistory.isEmpty()) {
+                    JOptionPane.showMessageDialog(gui, "No academic history available.", "Error", JOptionPane.ERROR_MESSAGE);
+                    return;
+                }
+        
+                // Generate recommended courses from the graph
+                int testScoreThreshold = 1200; // Example threshold for advanced courses
+                List<String> recommendedCourses = model.recommendCourses(academicHistory, testScoreThreshold);
+        
+                // Generate a combined college pathway (milestones + course recommendations)
                 String selectedCollege = studentView.getSelectedCollege();
                 if (selectedCollege == null) {
                     JOptionPane.showMessageDialog(gui, "Please select a college to generate a pathway.", "Error", JOptionPane.ERROR_MESSAGE);
                     return;
                 }
         
-                // Generate pathway data for the selected college
-                String[][] pathwayData = generateCollegePathway(selectedCollege);
+                String[][] pathwayData = generateCollegePathway(selectedCollege, recommendedCourses);
         
-                // Switch to PathwayView and populate data
+                // Switch to PathwayView and populate pathway
                 gui.switchToPathwayView(selectedCollege, pathwayData);
+        
             } catch (Exception e) {
                 JOptionPane.showMessageDialog(gui, "Error generating pathway: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
                 e.printStackTrace();
@@ -453,23 +481,85 @@ public class Controller implements ActionListener
         
     }
 
-    private String[][] generateCollegePathway(String collegeName) {
-        return new String[][]{
-            {"2024", "Apply to " + collegeName, "Submit applications and financial aid forms", "Application Complete"},
-            {"2025", "Enroll and Start Classes", "Begin coursework for selected major", "First Semester Completed"},
-            {"2026", "Participate in Internships", "Gain practical experience", "Internship Secured"},
-            {"2027", "Graduate", "Complete degree requirements", "Graduation"}
-        };
+    private void saveStateForUndo() {
+        DefaultTableModel model = studentView.getAcademicTableModel();
+        String[][] currentState = new String[model.getRowCount()][model.getColumnCount()];
+        for (int i = 0; i < model.getRowCount(); i++) {
+            for (int j = 0; j < model.getColumnCount(); j++) {
+                currentState[i][j] = (String) model.getValueAt(i, j);
+            }
+        }
+        undoStack.push(currentState);
+        redoStack.clear(); // Clear redo stack when a new action is performed
     }
-    
-    // private String generateReportContent() {
-    //     // Collect data from the Model and generate the report content
-    //     return "Your Career Pathway Report";
-    // }    
 
-    // private boolean exportReport() {
-    //     // Simulate exporting a report (replace with actual implementation)
-    //     return true; // Assume the export is always successful for now
-    // }
+    private void undo() {
+        if (undoStack.isEmpty()) {
+            JOptionPane.showMessageDialog(gui, "Nothing to undo!", "Info", JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+        redoStack.push(getCurrentTableState());
+        String[][] previousState = undoStack.pop();
+        populateTableFromState(previousState);
+    }
+
+    private void redo() {
+        if (redoStack.isEmpty()) {
+            JOptionPane.showMessageDialog(gui, "Nothing to redo!", "Info", JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+        undoStack.push(getCurrentTableState());
+        String[][] nextState = redoStack.pop();
+        populateTableFromState(nextState);
+    }
+
+    // Get the current table state
+private String[][] getCurrentTableState() {
+    DefaultTableModel model = studentView.getAcademicTableModel();
+    String[][] currentState = new String[model.getRowCount()][model.getColumnCount()];
+    for (int i = 0; i < model.getRowCount(); i++) {
+        for (int j = 0; j < model.getColumnCount(); j++) {
+            currentState[i][j] = (String) model.getValueAt(i, j);
+        }
+    }
+    return currentState;
+}
+
+// Populate the table from a saved state
+private void populateTableFromState(String[][] state) {
+    DefaultTableModel model = studentView.getAcademicTableModel();
+    model.setRowCount(0); // Clear current table
+    for (String[] row : state) {
+        model.addRow(row);
+    }
+}
+
+    private String[][] generateCollegePathway(String collegeName, List<String> recommendedCourses) {
+    // General milestones stored in a HashMap
+    Map<String, String> milestones = new HashMap<>();
+    milestones.put("Apply to College", "Submit applications and financial aid forms.");
+    milestones.put("Enroll in Classes", "Begin coursework for selected major.");
+    milestones.put("Participate in Internships", "Gain practical experience.");
+    milestones.put("Graduate", "Complete degree requirements.");
+
+    // List to store the pathway
+    List<String[]> pathway = new ArrayList<>();
+
+    // Add general milestones
+    pathway.add(new String[]{"2024", "Apply to " + collegeName, milestones.get("Apply to College"), "Application Complete"});
+    pathway.add(new String[]{"2025", "Enroll in Classes", milestones.get("Enroll in Classes"), "Enrollment Complete"});
+
+    // Add recommended courses (Graph integration)
+    int year = 2025;
+    for (String course : recommendedCourses) {
+        pathway.add(new String[]{String.valueOf(year++), course, "Complete prerequisites and maintain grade eligibility", "Course Completed"});
+    }
+
+    // Add final milestone
+    pathway.add(new String[]{"2027", "Graduate", milestones.get("Graduate"), "Graduation"});
+
+    // Return as a 2D array for display in the table
+    return pathway.toArray(new String[0][0]);
+}
     
 }

@@ -25,7 +25,7 @@ public class StudentView extends JPanel {
     private JTextField nameField, gradeField, schoolField;
     private JPanel buttonPanel, profilePanel, academicPanel, assessPanel;
     private JLabel nameLabel, gradeLabel, schoolLabel;
-    private JButton uploadGradeTestButton, saveButton,evaluateButton, genPathButton, logoutButton, deleteButton;
+    private JButton uploadGradeTestButton, saveButton,evaluateButton, genPathButton, logoutButton, deleteButton,undoButton, redoButton;
     private JTable academicTable;
     private DefaultTableModel academicTableModel;
     private JTable collegeTable;
@@ -157,6 +157,8 @@ public class StudentView extends JPanel {
     	logoutButton.setActionCommand("Logout");
     }
     public void formatButtons() {
+        undoButton = UIComponentFactory.createButton("Undo", 200, 40, new Color(63, 81, 181));
+        redoButton = UIComponentFactory.createButton("Redo", 200, 40, new Color(63, 81, 181));
     	uploadGradeTestButton = UIComponentFactory.createButton("Upload Grades", 200, 40, new Color(63, 81, 181));
         saveButton = UIComponentFactory.createButton("Save", 200, 40, new Color(34, 139, 34)); // New Save button
         deleteButton = UIComponentFactory.createButton("Delete Selected Row", 200, 30, Color.RED);
@@ -175,6 +177,13 @@ public class StudentView extends JPanel {
 	{
 		return deleteButton;
 	}
+    public JButton getUndoButton() {
+        return undoButton;
+    }
+    
+    public JButton getRedoButton() {
+        return redoButton;
+    }
     public JButton getEvaluateButton() {
         return evaluateButton;
     }

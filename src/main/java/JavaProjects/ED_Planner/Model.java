@@ -1,6 +1,7 @@
 package JavaProjects.ED_Planner;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -8,10 +9,8 @@ import java.util.TreeMap;
 
 public class Model {
     private UserDatabase userDatabase;
-   
-    
-    
     private TreeMap<Integer, String> academicTree; // For academic data hierarchy
+    private Map<String, List<String>> courseGraph;
     private User currentUser;
     private DataFetcher dataFetcher;
 
@@ -19,10 +18,8 @@ public class Model {
         this.userDatabase = new UserDatabase();
         this.academicTree = new TreeMap<>();
         this.dataFetcher = new DataFetcher();
-        
-        
-
-       
+        this.courseGraph = new HashMap<>();
+        initializeCourseGraph();       
     }
 
     public boolean saveAcademicHistory(String[][] academicData) {
@@ -53,9 +50,10 @@ public class Model {
         return new ArrayList<>();
     }
 
-     // Add academic records
-    public void addAcademicRecord(int year, String subject) {
-        academicTree.put(year, subject);
+     
+     public void addAcademicRecord(int year, String course, String grade) {
+        String record = course + " - Grade: " + grade;
+        academicTree.put(year, record);
     }
 
     // Sort academic records
@@ -94,6 +92,99 @@ public class Model {
             return currentUser;
         }
         return null;
+    }
+
+    private void initializeCourseGraph() {
+        // Add courses and prerequisites
+        courseGraph.put("Advanced Math 101", Arrays.asList("Math 101"));
+        courseGraph.put("Math 101", new ArrayList<>());
+        courseGraph.put("Advanced Science 101", Arrays.asList("Science 101"));
+        courseGraph.put("Science 101", new ArrayList<>());
+    }
+
+    public List<Map<String, String>> convertTreeMapToAcademicHistory() {
+        List<Map<String, String>> academicHistory = new ArrayList<>();
+        for (Map.Entry<Integer, String> entry : academicTree.entrySet()) {
+            Map<String, String> record = new HashMap<>();
+            String[] details = entry.getValue().split(" - ");
+            record.put("Year", String.valueOf(entry.getKey()));
+            record.put("CourseName", details[0]);
+            record.put("Grade", details.length > 1 ? details[1].replace("Grade: ", "") : "");
+    
+            // Debugging each record
+            System.out.println("Converted Record: " + record);
+    
+            academicHistory.add(record);
+        }
+        return academicHistory;
+    }
+    public List<String> recommendCourses(List<Map<String, String>> academicHistory, int testScoreThreshold) {
+        List<String> recommendedCourses = new ArrayList<>();
+
+        // Check each course in the graph
+        for (String course : courseGraph.keySet()) {
+            List<String> prerequisites = courseGraph.get(course);
+            boolean eligible = true;
+
+            for (String prerequisite : prerequisites) {
+                boolean passed = academicHistory.stream().anyMatch(record ->
+                    record.getOrDefault("CourseName", "").equals(prerequisite) &&
+                    record.getOrDefault("Grade", "").matches("[AB]") // Only A or B grades qualify
+                );
+
+                if (!passed) {
+                    eligible = false;
+                    break;
+                }
+            }
+
+            // Check test scores if it's an advanced course
+            if (course.startsWith("Advanced")) {
+                eligible = eligible && hasSufficientTestScore(academicHistory, testScoreThreshold);
+            }
+
+            if (eligible) {
+                recommendedCourses.add(course);
+            }
+        }
+        return recommendedCourses;
+    }
+
+    private boolean hasSufficientTestScore(List<Map<String, String>> academicHistory, int threshold) {
+        int totalScore = 0;
+        int count = 0;
+
+        for (Map<String, String> record : academicHistory) {
+            String satScore = record.getOrDefault("SAT", "");
+            String actScore = record.getOrDefault("ACT", "");
+
+            if (!satScore.isEmpty() && !satScore.equalsIgnoreCase("N/A")) {
+                try {
+                    totalScore += Integer.parseInt(satScore);
+                    count++;
+                } catch (NumberFormatException ignored) {}
+            }
+
+            if (!actScore.isEmpty() && !actScore.equalsIgnoreCase("N/A")) {
+                try {
+                    totalScore += Integer.parseInt(actScore) * 40; // ACT to SAT conversion
+                    count++;
+                } catch (NumberFormatException ignored) {}
+            }
+        }
+
+        int averageScore = count > 0 ? totalScore / count : 0;
+        return averageScore >= threshold;
+    }
+
+    public void debugAcademicTree() {
+        if (academicTree.isEmpty()) {
+            System.out.println("academicTree is empty.");
+        } else {
+            for (Map.Entry<Integer, String> entry : academicTree.entrySet()) {
+                System.out.println("Year: " + entry.getKey() + ", Record: " + entry.getValue());
+            }
+        }
     }
 }
 
