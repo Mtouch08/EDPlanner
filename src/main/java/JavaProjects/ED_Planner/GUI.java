@@ -165,10 +165,12 @@ public class GUI extends JFrame
         repaint();
     }
 
-	public StudentView getStudentView()
-	{
-		return studentView;
-	}
+	public StudentView getStudentView() {
+        if (studentView == null) {
+            studentView = new StudentView();
+        }
+        return studentView;
+    }
 	
 	public CreateAccountView getCreateAccountView() {
 		return createAccountView;

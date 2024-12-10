@@ -5,7 +5,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.util.List;
 import java.util.Map;
-import java.util.Queue;
+import java.util.stream.Collectors;
 
 import javax.swing.BorderFactory;
 import javax.swing.JLabel;
@@ -21,7 +21,6 @@ public class Controller implements ActionListener
     private Model model;
     private User currentUser;
     private StudentView studentView;
-    private DefaultTableModel tableModel;
     private LoginView loginView;
     
         
@@ -69,7 +68,7 @@ public class Controller implements ActionListener
                 handleGeneratePathway();
                 break;
             case "Logout":
-            	handleBack();
+            	handleLogout();
             	break;
             case "Back":
             	handleBack();
@@ -144,8 +143,9 @@ public class Controller implements ActionListener
             List<Map<String, String>> academicHistory = model.loadAcademicHistory();
     
             // Switch to StudentView and populate data
-            gui.switchToStudentView(currentUser);
-            populateAcademicTable(academicHistory);               
+        gui.switchToStudentView(currentUser);
+        studentView = gui.getStudentView(); // Update the studentView reference
+        populateAcademicTable(academicHistory);               
         } else {
             JOptionPane.showMessageDialog(gui, "Invalid email or password.", "Error", JOptionPane.ERROR_MESSAGE);
         }
@@ -163,61 +163,82 @@ public class Controller implements ActionListener
         }
     }
     private String[] showGradeInputDialog(String title) {
-        JPanel inputPanel = new JPanel(new GridLayout(7, 2, 10, 10));
+        JPanel inputPanel = new JPanel(new GridLayout(8, 2, 10, 10));
         inputPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+    
+        // Create text fields for input
         JTextField yearField = new JTextField();
+        JTextField semesterField = new JTextField(); // New field for semester
         JTextField subjectField = new JTextField();
         JTextField gradeField = new JTextField();
-        JTextField satField = new JTextField();
-        JTextField actField = new JTextField();
         JTextField fastReadField = new JTextField();
         JTextField fastMathField = new JTextField();
+        JTextField satField = new JTextField();
+        JTextField actField = new JTextField();
+    
+        // Add labels and fields to the panel
         inputPanel.add(new JLabel("Year:"));
         inputPanel.add(yearField);
+        inputPanel.add(new JLabel("Semester:"));
+        inputPanel.add(semesterField); // Semester input
         inputPanel.add(new JLabel("Course/Subject:"));
         inputPanel.add(subjectField);
         inputPanel.add(new JLabel("Grade:"));
         inputPanel.add(gradeField);
+        inputPanel.add(new JLabel("FAST-READ:"));
+        inputPanel.add(fastReadField);
+        inputPanel.add(new JLabel("FAST-MATH:"));
+        inputPanel.add(fastMathField);
         inputPanel.add(new JLabel("SAT:"));
         inputPanel.add(satField);
         inputPanel.add(new JLabel("ACT:"));
         inputPanel.add(actField);
-        inputPanel.add(new JLabel("FAST READING:"));
-       	inputPanel.add(fastReadField);
-        inputPanel.add(new JLabel("FAST MATH:"));
-        inputPanel.add(fastMathField);
+    
+        // Show the dialog
         int result = JOptionPane.showConfirmDialog(
-                null,
-                inputPanel,
-                title,
-                JOptionPane.OK_CANCEL_OPTION,
-                JOptionPane.PLAIN_MESSAGE
+            null,
+            inputPanel,
+            title,
+            JOptionPane.OK_CANCEL_OPTION,
+            JOptionPane.PLAIN_MESSAGE
         );
+    
         if (result == JOptionPane.OK_OPTION) {
-            try {
-                String year = yearField.getText();
-                String subject = subjectField.getText();
-                String grade = gradeField.getText();
-                String sat = satField.getText();
-                String act = actField.getText();
-                String fastRead = fastReadField.getText();
-                String fastMath = fastMathField.getText();
-                // Validate input
-                if (year.isEmpty() || subject.isEmpty() || grade.isEmpty() || sat.isEmpty() || act.isEmpty() || fastRead.isEmpty() || fastMath.isEmpty()) {
-                    throw new IllegalArgumentException("All fields must be filled.");
-                }
-               // Return data as a row
-                return new String[]{year, subject, grade, sat,act,fastRead,fastMath};
-            } catch (Exception e) {
+            // Required fields
+            String year = yearField.getText().trim();
+            String semester = semesterField.getText().trim();
+            String subject = subjectField.getText().trim();
+            String grade = gradeField.getText().trim();
+    
+            if (year.isEmpty() || semester.isEmpty() || subject.isEmpty() || grade.isEmpty()) {
                 JOptionPane.showMessageDialog(
-                        null,
-                        "Invalid input: " + e.getMessage(),
-                        "Error",
-                        JOptionPane.ERROR_MESSAGE
+                    null,
+                    "Year, Semester, Course/Subject, and Grade are required fields.",
+                    "Validation Error",
+                    JOptionPane.ERROR_MESSAGE
                 );
+                return null; // Return null to indicate invalid input
             }
+    
+            // Optional fields
+            String fastRead = fastReadField.getText().trim();
+            String fastMath = fastMathField.getText().trim();
+            String sat = satField.getText().trim();
+            String act = actField.getText().trim();
+    
+            // Return the entered data as a row
+            return new String[]{
+                year,
+                semester,
+                subject,
+                grade,
+                fastRead.isEmpty() ? " " : fastRead,
+                fastMath.isEmpty() ? " " : fastMath,
+                sat.isEmpty() ? " " : sat,
+                act.isEmpty() ? " " : act
+            };
         }
-        return null; // Return null if canceled
+        return null; // Return null if the dialog is canceled
     }
    
     
@@ -263,46 +284,108 @@ public class Controller implements ActionListener
     	    }
     	}
 
-    private void handleSave(){
-         studentView = gui.getStudentView();
-        if (studentView == null) {
-            System.err.println("StudentView is not initialized!");
-            return;
-        }
-    
-        // Retrieve academic history from the table
-         tableModel = studentView.getAcademicTableModel();
-        int rowCount = tableModel.getRowCount();
-        int colCount = tableModel.getColumnCount();
-        String[][] academicData = new String[rowCount][colCount];
-    
-        for (int i = 0; i < rowCount; i++) {
-            for (int j = 0; j < colCount; j++) {
-                academicData[i][j] = tableModel.getValueAt(i, j).toString();
-            }
-        }
-    
-        // Save the academic data
-        if (model.saveAcademicHistory(academicData)) {
-            JOptionPane.showMessageDialog(gui, "Academic history saved successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
-        } else {
-            JOptionPane.showMessageDialog(gui, "Failed to save academic history.", "Error", JOptionPane.ERROR_MESSAGE);
-        }  
-    }
-    private void handleEvaluate() {
+    private void handleSave() {
             try {
-                Queue<String> recommendations = model.getCareerRecommendationsFromAPI();
-                StringBuilder recList = new StringBuilder("Career Recommendations:\n");
-                for (String rec : recommendations) {
-                    recList.append(rec).append("\n");
+                // Ensure studentView is not null
+                if (studentView == null) {
+                    studentView = gui.getStudentView();
                 }
-                JOptionPane.showMessageDialog(gui, recList.toString(), "Recommendations", JOptionPane.INFORMATION_MESSAGE);
+        
+                // Get the academic table model
+                DefaultTableModel academicTableModel = studentView.getAcademicTableModel();
+                int rowCount = academicTableModel.getRowCount();
+                int colCount = academicTableModel.getColumnCount();
+                String[][] academicData = new String[rowCount][colCount];
+        
+                // Extract data from the table model
+                for (int i = 0; i < rowCount; i++) {
+                    for (int j = 0; j < colCount; j++) {
+                        Object cellValue = academicTableModel.getValueAt(i, j);
+                        academicData[i][j] = (cellValue != null) ? cellValue.toString() : "N/A"; // Handle null values
+                    }
+                }
+        
+                // Save the academic history
+                if (model.saveAcademicHistory(academicData)) {
+                    JOptionPane.showMessageDialog(gui, "Academic history saved successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
+                } else {
+                    JOptionPane.showMessageDialog(gui, "Failed to save academic history.", "Error", JOptionPane.ERROR_MESSAGE);
+                }
             } catch (Exception e) {
-                JOptionPane.showMessageDialog(gui, "Error fetching recommendations: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(gui, "Error saving academic history: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+                e.printStackTrace();
             }
         }
+        private void handleEvaluate() {
+            try {
+                // Extract SAT/ACT scores and calculate average
+                DefaultTableModel academicTableModel = studentView.getAcademicTableModel();
+                int rowCount = academicTableModel.getRowCount();
+                int totalScore = 0;
+                int scoreCount = 0;
+        
+                for (int i = 0; i < rowCount; i++) {
+                    String satScore = (String) academicTableModel.getValueAt(i, 6);
+                    String actScore = (String) academicTableModel.getValueAt(i, 7);
+        
+                    if (satScore != null && !satScore.trim().isEmpty() && !satScore.equalsIgnoreCase("N/A")) {
+                        totalScore += Integer.parseInt(satScore);
+                        scoreCount++;
+                    }
+                    if (actScore != null && !actScore.trim().isEmpty() && !actScore.equalsIgnoreCase("N/A")) {
+                        totalScore += Integer.parseInt(actScore) * 40;
+                        scoreCount++;
+                    }
+                }
+        
+                int averageScore = (scoreCount > 0) ? (totalScore / scoreCount) : 0;
+                System.out.println("Average SAT/ACT equivalent score calculated: " + averageScore);
+        
+                // Fetch colleges
+                List<Map<String, String>> allColleges = model.fetchAllColleges();
+                System.out.println("Fetched " + allColleges.size() + " colleges from the API.");
+        
+                // Filter colleges
+                List<Map<String, String>> filteredColleges = filterCollegesByTestScores(allColleges, averageScore);
+        
+                if (filteredColleges.isEmpty()) {
+                    System.out.println("No colleges passed the filter. Displaying all colleges instead.");
+                    filteredColleges = allColleges; // Fallback to all colleges
+                }
+        
+                // Populate college table
+                studentView.populateCollegeRecommendations(filteredColleges);
+        
+                JOptionPane.showMessageDialog(gui, "Evaluation completed. Recommended colleges are listed.", "Success", JOptionPane.INFORMATION_MESSAGE);
+            } catch (Exception e) {
+                JOptionPane.showMessageDialog(gui, "Error during evaluation: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+                e.printStackTrace();
+            }
+        }
+
+        private List<Map<String, String>> filterCollegesByTestScores(List<Map<String, String>> colleges, int averageSAT) {
+            System.out.println("Applying SAT score filter...");
+            return colleges.stream()
+                .filter(college -> {
+                    String medianSat = college.get("Median SAT Score");
+                    if (medianSat == null || medianSat.isEmpty() || medianSat.equalsIgnoreCase("N/A")) {
+                        System.out.println("No SAT score available, including college: " + college.get("Name"));
+                        return true; // Include colleges without SAT scores
+                    }
+                    try {
+                        int satScore = Integer.parseInt(medianSat);
+                        return satScore >= averageSAT - 100 && satScore <= averageSAT + 100;
+                    } catch (NumberFormatException e) {
+                        System.out.println("Invalid SAT score for college: " + college.get("Name"));
+                        return false; // Exclude colleges with invalid SAT scores
+                    }
+                })
+                .peek(college -> System.out.println("College passed filter: " + college.get("Name")))
+                .collect(Collectors.toList());
+        }
+
         private void populateAcademicTable(List<Map<String, String>> academicHistory) {
-             studentView = gui.getStudentView();
+            StudentView studentView = gui.getStudentView();
             DefaultTableModel tableModel = studentView.getAcademicTableModel();
         
             // Clear existing data
@@ -312,12 +395,13 @@ public class Controller implements ActionListener
             for (Map<String, String> record : academicHistory) {
                 String[] rowData = {
                     record.getOrDefault("Year", ""),
+                    record.getOrDefault("Semester", ""),
                     record.getOrDefault("CourseName", ""),
                     record.getOrDefault("Grade", ""),
+                    record.getOrDefault("FAST_READ", ""),
+                    record.getOrDefault("FAST_MATH", ""),
                     record.getOrDefault("SAT", ""),
-                    record.getOrDefault("ACT", ""),
-                    record.getOrDefault("FAST_READING", ""),
-                    record.getOrDefault("FAST_MATH", "")
+                    record.getOrDefault("ACT", "")
                 };
                 tableModel.addRow(rowData);
             }
@@ -325,16 +409,22 @@ public class Controller implements ActionListener
 
   
         private void handleGeneratePathway() {
-            String career = "Software Developer";
-            List<String> pathway = model.bfsPathway(career);
-            String[][] pathwayData = new String[pathway.size()][4];
-            for (int i = 0; i < pathway.size(); i++) {
-                pathwayData[i][0] = String.valueOf(2023 + i);
-                pathwayData[i][1] = pathway.get(i);
-                pathwayData[i][2] = i > 0 ? pathway.get(i - 1) : "None";
-                pathwayData[i][3] = "Complete coursework and gain internship experience";
+            try {
+                String selectedCollege = studentView.getSelectedCollege();
+                if (selectedCollege == null) {
+                    JOptionPane.showMessageDialog(gui, "Please select a college to generate a pathway.", "Error", JOptionPane.ERROR_MESSAGE);
+                    return;
+                }
+        
+                // Generate pathway data for the selected college
+                String[][] pathwayData = generateCollegePathway(selectedCollege);
+        
+                // Switch to PathwayView and populate data
+                gui.switchToPathwayView(selectedCollege, pathwayData);
+            } catch (Exception e) {
+                JOptionPane.showMessageDialog(gui, "Error generating pathway: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+                e.printStackTrace();
             }
-            gui.switchToPathwayView(career, pathwayData);
         }
     
     private void handleBack() {
@@ -345,19 +435,41 @@ public class Controller implements ActionListener
     	JOptionPane.showMessageDialog(gui, "Pathway confirmed!", "Success", JOptionPane.INFORMATION_MESSAGE);
         handleBack();
     }
+    private void handleLogout() {
+        int confirm = JOptionPane.showConfirmDialog(
+            gui,
+            "Are you sure you want to logout?",
+            "Logout Confirmation",
+            JOptionPane.YES_NO_OPTION
+        );
 
+        if (confirm == JOptionPane.YES_OPTION) {
+            gui.switchToLoginView();
+        }
+
+        
+    }
     private void handleExportReport() {
         
     }
-    
-    private String generateReportContent() {
-        // Collect data from the Model and generate the report content
-        return "Your Career Pathway Report";
-    }    
 
-    private boolean exportReport() {
-        // Simulate exporting a report (replace with actual implementation)
-        return true; // Assume the export is always successful for now
+    private String[][] generateCollegePathway(String collegeName) {
+        return new String[][]{
+            {"2024", "Apply to " + collegeName, "Submit applications and financial aid forms", "Application Complete"},
+            {"2025", "Enroll and Start Classes", "Begin coursework for selected major", "First Semester Completed"},
+            {"2026", "Participate in Internships", "Gain practical experience", "Internship Secured"},
+            {"2027", "Graduate", "Complete degree requirements", "Graduation"}
+        };
     }
+    
+    // private String generateReportContent() {
+    //     // Collect data from the Model and generate the report content
+    //     return "Your Career Pathway Report";
+    // }    
+
+    // private boolean exportReport() {
+    //     // Simulate exporting a report (replace with actual implementation)
+    //     return true; // Assume the export is always successful for now
+    // }
     
 }
